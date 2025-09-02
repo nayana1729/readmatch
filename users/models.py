@@ -20,6 +20,8 @@ class Book(models.Model):
 	author = models.CharField(max_length=100)
 	genres = models.ManyToManyField('Genre', blank=True)
 	external_id = models.CharField(max_length=100, blank=True, null=True)
+	page_count = models.PositiveIntegerField(default=0)
+	year_published = models.PositiveIntegerField(blank=True, null=True)
 
 	def __str__(self):
-		return f"{self.title} by {self.author}"
+		return f"{self.title} by {self.author} | pages: {self.page_count} | year: (self.year_published) | external_id: {self.external_id}"
