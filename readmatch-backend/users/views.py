@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 import tempfile
 from users.models import CustomUser, UserMatch, UserBook
 from users.matching import batch_match_users, shuffle_connection
-from users.import_books import import_books_from_csv
+from users.import_books import import_books
 
 @csrf_exempt
 def upload_csv(request):
@@ -17,7 +17,7 @@ def upload_csv(request):
                 tmp.write(chunk)
             tmp_path = tmp.name
 
-        import_books_from_csv(tmp_path, user)
+        import_books(tmp_path, user)
         return JsonResponse({'success': 'yayy ur books have been imported !!'})
     return JsonResponse({'error': 'no file or user has been given ;('})
 
