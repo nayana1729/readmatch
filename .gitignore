@@ -1,0 +1,9 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/ok 
+
+# Django database
+db.sqlite3
