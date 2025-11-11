@@ -10,7 +10,7 @@ find a book buddy for life !!
 - upload goodreads data and import books
 - users are matched based on genre preferences and reading patterns
 - if you are unhappy with your match, click shuffle and easily find a better reading buddy
-- the matching algorithm uses cosine similarity and weights recently read books higher
+- the matching algorithm uses cosine similarity and weighs recently read books higher
 
 ## how to use:
 ```bash
