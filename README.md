@@ -1,4 +1,4 @@
-# readmatch
+# readmatch 💗
 
 **a dating app, but for readers !**
 
@@ -29,4 +29,4 @@ this project is still in progress ! backend is working and tested (more features
 
 ## credits:
 created by me ! (https://github.com/nayana1729)
-thank you to [] for the idea :)))
+thank you to ani musunuri for the idea :)))
