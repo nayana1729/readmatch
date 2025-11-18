@@ -1,18 +1,17 @@
 # readmatch 💗
 
-**a dating app, but for readers !**
+**A dating app, but for readers!**
 
-this is a django-based project that matches you with readers who are most compatible with you. all you have to do is upload your goodreads data, complete a short quiz, and click the match button !
+This is a Django-based project that matches you with readers who are most compatible with you by using Goodreads data and quiz responses. This is done by analyzing your reading history, genre preferences, and recency weightage to pair you accurately.
 
-find a book buddy for life !!
+## Features:
+- Upload Goodreads data and import books
+- Users are matched based on genre preferences and reading patterns
+- Shuffle feature allows you to find another match
+- The matching algorithm uses cosine similarity and gives more weight to recently read books
+- Django backend with user login, data import endpoints, and match generation logic
 
-## features:
-- upload goodreads data and import books
-- users are matched based on genre preferences and reading patterns
-- if you are unhappy with your match, click shuffle and easily find a better reading buddy
-- the matching algorithm uses cosine similarity and weighs recently read books higher
-
-## how to use:
+## How to Run:
 ```bash
 git clone https://github.com/nayana1729/readmatch.git
 cd readmatch/readmatch-backend
@@ -22,11 +21,7 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
 ```
-then go to http://127.0.0.1:8000/
+Then go to http://127.0.0.1:8000/
 
-## notes:
-this project is still in progress ! backend is working and tested (more features will be added soon :D) and frontend is in the works.
-
-## credits:
-created by me ! (https://github.com/nayana1729)
-thank you to ani musunuri for the idea :)))
+## Notes:
+This project is still in progress! Backend is functional and tested, and frontend is in development.
