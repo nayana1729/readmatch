@@ -18,7 +18,7 @@ from django.urls import path
 from users import views
 
 urlpatterns = [
-    path('api/upload-csv/', views.upload_gr_csv, name='upload_csv'),
+    path('api/upload-csv/', views.upload_csv, name='upload_csv'),
     path('api/match/', views.trigger_match, name='find_match'),
     path('api/shuffle/', views.shuffle_match, name='shuffle_match'),
     path('api/view-matches/<int:user_id>/', views.view_matches, name='view_matches'),

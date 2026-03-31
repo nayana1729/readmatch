@@ -1,8 +1,5 @@
 asgiref==3.9.1
-click==8.2.1
 Django==5.2.5
 numpy==2.3.2
-pillow==11.3.0
+python-dotenv
 sqlparse==0.5.3
-svgwrite==1.4.3
-Tree==0.2.4

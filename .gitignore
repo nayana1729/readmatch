@@ -3,7 +3,14 @@ __pycache__/
 *.pyc
 
 # Virtual environment
-venv/ok 
+venv/
+readmatch-backend/venv/
 
 # Django database
 db.sqlite3
+
+# Environment variables
+readmatch-backend/.env
+
+# Personal data
+*.csv

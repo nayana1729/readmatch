@@ -20,35 +20,34 @@ def already_matched(u: CustomUser, v: CustomUser) -> bool:
            UserMatch.objects.filter(user=v, matched_user=u).exists()
 
 def create_mutual(u: CustomUser, v: CustomUser) -> None:
-    if not UserMatch.objects.filter(user=u, matched_user=v).exists():
-        UserMatch.objects.create(user=u, matched_user=v)
-    if not UserMatch.objects.filter(user=v, matched_user=u).exists():
-        UserMatch.objects.create(user=v, matched_user=u)
+    UserMatch.objects.get_or_create(user=u, matched_user=v)
+    UserMatch.objects.get_or_create(user=v, matched_user=u)
 
 def delete_mutual(u: CustomUser, v: CustomUser) -> None:
     UserMatch.objects.filter(user=u, matched_user=v).delete()
     UserMatch.objects.filter(user=v, matched_user=u).delete()
 
-def exclusions(u: CustomUser) -> set:
+def exclusions(u: CustomUser) -> set[int]:
     cur = set(UserMatch.objects.filter(user=u).values_list('matched_user_id', flat=True))
     prev = set(u.previous_matches.values_list('id', flat=True))
     return cur.union(prev, {u.id})
 
-def noise(seed: str, lo=-0.25, hi=0.25):
+def noise(seed: str, lo: float = -0.25, hi: float = 0.25) -> float:
     h = hashlib.md5(seed.encode()).hexdigest()
     x = int(h[:8], 16) / 0xFFFFFFFF
     return lo + (hi - lo) * x
 
 def build_user_vector(user: CustomUser) -> np.ndarray:
     if not eligible(user):
-        return np.zeros(6, dtype=float)
+        n_genres = len(user.quiz_genres) if user.quiz_genres else 0
+        return np.zeros(n_genres + 3, dtype=float)
 
     vec = []
 
     for genre, rating in sorted(user.quiz_genres.items()):
         base = float(rating)
-        noise = noise(f"{user.username}:{genre}", -0.3, 0.3)
-        vec.append(base + noise)
+        n = noise(f"{user.username}:{genre}", -0.3, 0.3)
+        vec.append(base + n)
 
     qs = UserBook.objects.filter(user=user).order_by("-date_read")
     books = list(qs[:max_books])
@@ -56,8 +55,11 @@ def build_user_vector(user: CustomUser) -> np.ndarray:
 
     ratings, pages, weights = [], [], []
     for ub in books:
-        years_ago = (today - ub.date_read).days / 365.0 if ub.date_read else recent_years + 1
-        rec_w = 1.0 + max(0.0, (recent_years - years_ago)) / recent_years
+        if ub.date_read:
+            years_ago = (today - ub.date_read).days / 365.0
+            rec_w = 1.0 + max(0.0, (recent_years - years_ago)) / recent_years
+        else:
+            rec_w = 1.0
         ratings.append(float(ub.my_rating or 0.0))
         pages.append(float(ub.book.num_pages or 0.0))
         weights.append(rec_w)
@@ -90,7 +92,7 @@ def batch_match_users() -> None:
         return
 
     vectors = {u.id: build_user_vector(u) for u in users}
-    exclusions = {u.id: exclusions(u) for u in users}
+    exclusion_map = {u.id: exclusions(u) for u in users}
     counts = {u.id: count(u) for u in users}
     id2u = {u.id: u for u in users}
 
@@ -98,9 +100,7 @@ def batch_match_users() -> None:
     for i, ui in enumerate(users):
         for j in range(i + 1, len(users)):
             uj = users[j]
-            if uj.id in exclusions[ui.id] or ui.id in exclusions[uj.id]:
-                continue
-            if _already_matched(ui, uj):
+            if uj.id in exclusion_map[ui.id] or ui.id in exclusion_map[uj.id]:
                 continue
             score = cosine_similarity(vectors[ui.id], vectors[uj.id])
             if score > 0.0:
@@ -109,7 +109,7 @@ def batch_match_users() -> None:
     pairs.sort(key=lambda t: (-t[0], t[1], t[2]))
 
     for score, joined1, joined2, uid, vid in pairs:
-        if counts[uid] or counts[vid] >= max_matches:
+        if counts[uid]>= max_matches or counts[vid] >= max_matches:
             continue
         u, v = id2u[uid], id2u[vid]
         create_mutual(u, v)
@@ -119,8 +119,6 @@ def batch_match_users() -> None:
     for score, joined1, joined2, uid, vid in pairs:
         u_c, v_c = counts[uid], counts[vid]
         if not ((u_c == 0 and v_c < max_matches) or (v_c == 0 and u_c < max_matches)):
-            continue
-        if counts[uid] >= max_matches or counts[vid] >= max_matches:
             continue
         u, v = id2u[uid], id2u[vid]
         if already_matched(u, v):
@@ -147,29 +145,23 @@ def shuffle_connection(shuffler: CustomUser) -> None:
     if settings.DEBUG:
         print(f"[shuffle] after deletion for {shuffler.username}: []")
 
-    assign_new(shuffler, 1, exclude_ids=_exclusions(shuffler))
+    assign_new(shuffler, 1, exclude_ids=exclusions(shuffler))
 
     if settings.DEBUG:
         print(f"[shuffle] after shuffle for {shuffler.username}: "
           f"{[m.matched_user.username for m in shuffler.user_matches.all()]}")
 
-def assign_new(user: CustomUser, n: int, exclude_ids: set) -> None:
+def assign_new(user: CustomUser, n: int, exclude_ids: set[int]) -> None:
     if not eligible(user):
         return
-
-    current = count(user)
-    room = min(n, max_matches - current)
-    if room <= 0:
+    if count(user) >= max_matches:
         return
 
     u_vec = build_user_vector(user)
-
     others = [o for o in CustomUser.objects.exclude(id__in=exclude_ids) if eligible(o)]
 
     scored = []
     for o in others:
-        if _already_matched(user, o):
-            continue
         oc = count(o)
         if oc >= max_matches:
             continue
@@ -185,6 +177,3 @@ def assign_new(user: CustomUser, n: int, exclude_ids: set) -> None:
         if count(match) >= max_matches:
             continue
         create_mutual(user, match)
-        room -= 1
-        if room <= 0:
-            break

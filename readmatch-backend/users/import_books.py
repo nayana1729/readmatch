@@ -1,13 +1,14 @@
 import csv
-from datetime import date, datetime
-from users.models import Book, UserBook
+from django.utils import timezone
+from datetime import datetime, date
+from users.models import Book, UserBook, CustomUser
 
 recent_years = 5
 min_books = 50
 max_books = 150
 
-def import_books(file_path, user):
-    today = date.today()
+def import_books(file_path: str, user: CustomUser) -> bool:
+    today = timezone.now().date()
     imported_books = []
 
     with open(file_path, 'r', encoding='utf-8') as csv_file:
@@ -29,10 +30,6 @@ def import_books(file_path, user):
             if not title:
                 continue
 
-            years_ago = ((today - date_read).days / 365) if date_read else 999
-            weight = 1 + max(0, (recent_years - years_ago) / recent_years)
-
-
             imported_books.append({
                 "book_id": book_id,
                 "title": title,
@@ -43,20 +40,15 @@ def import_books(file_path, user):
                 "year_published": year_published,
                 "user_rating": user_rating,
                 "date_read": date_read or today,
-                "weight": weight,
             })
 
     imported_books.sort(key=lambda x: x["date_read"], reverse=True)
 
     total_books = len(imported_books)
+    if total_books < min_books:
+        return False
     if total_books > max_books:
         imported_books = imported_books[:max_books]
-    if total_books < min_books:
-        print(
-        f"hi {user.username} ! thank you for using our project :)\n"
-        f"unfortunately, you only have {total_books} books.\n"
-        f"we require a minimum of 150 ! get to reading 😁"
-    )
 
     for b in imported_books:
         book, _ = Book.objects.update_or_create(
@@ -71,7 +63,7 @@ def import_books(file_path, user):
             },
         )
 
-        ub, _ = UserBook.objects.update_or_create(
+        UserBook.objects.update_or_create(
             user=user,
             book=book,
             defaults={
@@ -79,24 +71,23 @@ def import_books(file_path, user):
                 "date_read": b["date_read"],
             },
         )
+    return True
 
-        ub.weight = b["weight"]
 
-
-def to_float(val):
+def safe_float(val: str | None) -> float:
     try:
         return float(val) if val else 0.0
     except (ValueError, TypeError):
         return 0.0
 
 
-def to_int(val):
+def safe_int(val: str | None) -> int:
     try:
         return int(val) if val else 0
     except (ValueError, TypeError):
         return 0
 
-def parse_date(s):
+def parse_date(s: str | None) -> date | None:
     if not s:
         return None
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):

@@ -1,10 +1,11 @@
+import os
+import tempfile
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import tempfile
-from users.models import CustomUser, UserMatch, UserBook
+from users.models import CustomUser, UserMatch
 from users.matching import batch_match_users, shuffle_connection
-from users.import_books import import_books
+from users.import_books import import_books, min_books
 
 @csrf_exempt
 def upload_csv(request):
@@ -16,11 +17,16 @@ def upload_csv(request):
             for chunk in csv_file.chunks():
                 tmp.write(chunk)
             tmp_path = tmp.name
-
-        import_books(tmp_path, user)
+        try:
+            success = import_books(tmp_path, user)
+        finally:
+            os.remove(tmp_path)
+        if not success:
+            return JsonResponse({'error': f' unfortunately, we require a minimum of {min_books} ! get to reading 😁'}, status=400)
         return JsonResponse({'success': 'yayy ur books have been imported !!'})
-    return JsonResponse({'error': 'no file or user has been given ;('})
+    return JsonResponse({'error': 'no file or user has been given ;('}, status=400)
 
+@csrf_exempt
 def trigger_match(request):
     if request.method == 'POST':
         user_id = request.POST.get('user_id')
@@ -32,8 +38,9 @@ def trigger_match(request):
         data = {'matches': [m.matched_user.username for m in matches]}
         return JsonResponse(data)
 
-    return JsonResponse({'error': 'this is invalid :((('})
+    return JsonResponse({'error': 'this is invalid :((('}, status=400)
 
+@csrf_exempt
 def shuffle_match(request):
     if request.method == 'POST':
         user_id = request.POST.get('user_id')
@@ -52,7 +59,7 @@ def shuffle_match(request):
         }
         return JsonResponse(data)
 
-    return JsonResponse({'error': 'this is invalid :((('})
+    return JsonResponse({'error': 'this is invalid :((('}, status=400)
 
 def view_matches(request, user_id):
     user = get_object_or_404(CustomUser, id=user_id)
